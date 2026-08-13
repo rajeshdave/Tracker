@@ -8,6 +8,7 @@
 const DB_NAME = 'MilkTrackerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'settings';
+const APP_VERSION = '1.0.2';
 
 // ==========================================================================
 // 📦 INDEXEDDB STORAGE WRAPPER
@@ -102,6 +103,7 @@ const MilkTracker = {
     el: {},
 
     async init() {
+        await this.checkForUpdates();
         this.cacheElements();
         
         // Initialize storage layer
@@ -230,6 +232,26 @@ const MilkTracker = {
             this.hideToast();
             this.exportBackup();
         });
+    },
+
+    // ==========================================================================
+    // 🔄 AUTO-UPDATE & CACHE BUSTING CHECK
+    // ==========================================================================
+    async checkForUpdates() {
+        try {
+            const response = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.version && data.version !== APP_VERSION) {
+                    console.log(`New version detected: ${data.version}. Reloading browser to bypass cache...`);
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('v', data.version);
+                    window.location.href = url.toString();
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to check for updates:", e);
+        }
     },
 
     // ==========================================================================
