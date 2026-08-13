@@ -95,11 +95,22 @@ To maintain an optimized database, the app automatically cleans legacy logs:
 
 ---
 
-## 🔄 Mobile Cache-Busting & Version Tagging
+## 🔄 Mobile Cache-Busting & Auto-Reload Versioning
 
-Mobile browsers cache stylesheet and javascript files aggressively. When pushing updates to GitHub Pages, use cache-busting version tags inside `index.html` to force browsers to pull the latest versions:
+To bypass mobile browser caches automatically whenever new changes are pushed:
 
-1.  Increment the version suffix (e.g. from `1.0.0` to `1.0.1`) in these asset imports inside `index.html`:
-    *   `<link rel="stylesheet" href="styles.css?v=1.0.1">` (Line 10)
-    *   `<script src="app.js?v=1.0.1"></script>` (Line 160)
-2.  Commit and push to trigger a GitHub pages deployment.
+1. **Version Constants**:
+   * **[`version.json`](file:///home/rajeshkumardave/Rajesh/codebase_other/tracker/version.json)**: Stores the current release version of the application on the server (e.g., `{"version": "1.0.3"}`).
+   * **[`app.js`](file:///home/rajeshkumardave/Rajesh/codebase_other/tracker/app.js)**: Stores the corresponding client-side constant `const APP_VERSION = '1.0.3';`.
+
+2. **Self-Update Mechanics**:
+   * On startup, the app executes `checkForUpdates()`, fetching `version.json?t=[timestamp]` using `cache: 'no-store'` to bypass any CDN or intermediary caches.
+   * If the version in `version.json` differs from `APP_VERSION`, it executes a `window.location.replace` reload appending `?v=[version]` to force-flush browser memory.
+   * Immediately after reloading, the page runs `window.history.replaceState` to clean the URL, stripping the version query parameter and leaving a clean browser address bar.
+
+3. **Workflow for Pushing Updates**:
+   * Whenever you make a code change to `index.html`, `styles.css`, or `app.js`:
+     1. Bump the version string in `version.json` (e.g., from `1.0.3` to `1.0.4`).
+     2. Bump `APP_VERSION` in `app.js` to match (e.g., `const APP_VERSION = '1.0.4';`).
+     3. Commit and push the updates.
+     4. Visitor devices will automatically fetch the latest build and refresh in the background, keeping the user-facing URL completely clean.
