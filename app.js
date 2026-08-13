@@ -8,7 +8,7 @@
 const DB_NAME = 'MilkTrackerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'settings';
-const APP_VERSION = '1.0.4';
+const APP_VERSION = '1.0.5';
 
 // ==========================================================================
 // 📦 INDEXEDDB STORAGE WRAPPER
@@ -632,7 +632,6 @@ const MilkTracker = {
         
         yearsSet.add(currentYear);
         yearsSet.add(currentYear - 1);
-        yearsSet.add(currentYear + 1);
 
         Object.keys(this.db.entries).forEach(dateKey => {
             const match = dateKey.match(/^(\d{4})-\d{2}-\d{2}$/);
@@ -652,6 +651,9 @@ const MilkTracker = {
             opt.innerText = year;
             this.el.backupYearSelect.appendChild(opt);
         });
+
+        // Default the selected dropdown value to the current year
+        this.el.backupYearSelect.value = currentYear;
     },
 
     exportBackup() {
