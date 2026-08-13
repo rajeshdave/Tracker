@@ -7,7 +7,7 @@
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥛</text></svg>">
     <!-- Style Sheet -->
-    <link rel="stylesheet" href="styles.css?v=1.0.0">
+    <link rel="stylesheet" href="styles.css?v=1.0.1">
 </head>
 <body>
     <div id="app-container">
@@ -18,120 +18,134 @@
                 <span class="brand-logo">🥛</span>
                 <h1 class="brand-title">Milk Tracker</h1>
             </div>
-            <div id="storage-badge" class="storage-badge" title="Checking storage protection status...">
-                <span id="storage-icon">🔓</span>
-                <span id="storage-status-text">Storage: Temporary</span>
+            <!-- Tab Navigation Header Control -->
+            <div class="tab-nav-container">
+                <button id="tab-btn-ledger" class="tab-btn active" aria-label="Show Ledger View">📅 Ledger</button>
+                <button id="tab-btn-settings" class="tab-btn" aria-label="Show Settings & Backups">⚙️ Settings</button>
             </div>
         </header>
 
-        <!-- ================= MONTH NAVIGATION ================= -->
-        <section class="navigation-bar">
-            <button id="btn-prev-month" class="btn-nav" aria-label="Previous Month">
-                <span>⬅️</span> <span class="nav-btn-text">Prev</span>
-            </button>
-            <h2 id="nav-month-title" class="nav-month-title">August 2026</h2>
-            <button id="btn-next-month" class="btn-nav" aria-label="Next Month">
-                <span class="nav-btn-text">Next</span> <span>➡️</span>
-            </button>
-        </section>
+        <!-- ================= LEDGER TAB SCREEN ================= -->
+        <div id="ledger-screen" class="tab-screen active">
+            
+            <!-- Month Navigation -->
+            <section class="navigation-bar">
+                <button id="btn-prev-month" class="btn-nav" aria-label="Previous Month">
+                    <span>⬅️</span> <span class="nav-btn-text">Prev</span>
+                </button>
+                <h2 id="nav-month-title" class="nav-month-title">August 2026</h2>
+                <button id="btn-next-month" class="btn-nav" aria-label="Next Month">
+                    <span class="nav-btn-text">Next</span> <span>➡️</span>
+                </button>
+            </section>
 
-        <!-- ================= STATS SUMMARY BANNER ================= -->
-        <section class="stats-grid">
-            <div class="stat-card">
-                <span class="stat-label">Total Milk Volume</span>
-                <div class="stat-val">
-                    <span id="stat-total-litres">0.00</span>
-                    <span class="stat-unit">Ltr</span>
+            <!-- Calendar Grid Ledger View -->
+            <main class="calendar-card">
+                <div class="calendar-header">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
                 </div>
-            </div>
-            <div class="stat-card accent">
-                <span class="stat-label">Rate Per Litre</span>
-                <div class="stat-val">
-                    <span class="stat-unit">₹</span><span id="stat-rate-val">75.00</span>
+                <div id="calendar-grid" class="calendar-grid">
+                    <!-- Days will be dynamically loaded via JS -->
                 </div>
-            </div>
-            <div class="stat-card success">
-                <span class="stat-label">Total Monthly Cost</span>
-                <div class="stat-val">
-                    <span class="stat-unit">₹</span><span id="stat-total-cost">0.00</span>
-                </div>
-            </div>
-        </section>
+            </main>
 
-        <!-- ================= CALENDAR LEDGER VIEW ================= -->
-        <main class="calendar-card">
-            <div class="calendar-header">
-                <div>Sun</div>
-                <div>Mon</div>
-                <div>Tue</div>
-                <div>Wed</div>
-                <div>Thu</div>
-                <div>Fri</div>
-                <div>Sat</div>
-            </div>
-            <div id="calendar-grid" class="calendar-grid">
-                <!-- Days will be dynamically loaded via JS -->
-            </div>
+            <!-- Stats Summary Banner Displayed Just Below Calendar -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Total Milk Volume</span>
+                    <div class="stat-val">
+                        <span id="stat-total-litres">0.00</span>
+                        <span class="stat-unit">Ltr</span>
+                    </div>
+                </div>
+                <div class="stat-card success">
+                    <span class="stat-label">Total Monthly Cost</span>
+                    <div class="stat-val">
+                        <span class="stat-unit">₹</span><span id="stat-total-cost">0.00</span>
+                    </div>
+                </div>
+            </section>
             
             <div style="text-align: center; margin-top: 10px;">
-                <button id="btn-quick-log" class="btn btn-primary">
+                <button id="btn-quick-log" class="btn btn-primary" style="width: 100%; max-width: 320px;">
                     ➕ Record for Specific Date
                 </button>
             </div>
-        </main>
 
-        <!-- ================= SETTINGS & BACKUP DRAWER ================= -->
-        <section class="settings-panel">
-            <h3 class="panel-title">⚙️ Settings & Year-wise Backups</h3>
-            <div class="settings-grid">
+        </div>
+
+        <!-- ================= SETTINGS TAB SCREEN ================= -->
+        <div id="settings-screen" class="tab-screen">
+            
+            <section class="settings-panel">
+                <h3 class="panel-title">⚙️ Preferences & Storage Utilities</h3>
                 
-                <!-- Preferences Settings Group -->
-                <div class="settings-group">
-                    <h4>Preference Settings</h4>
-                    <div class="settings-input-row">
-                        <span class="input-label">Default Litre Amount (Ltr):</span>
-                        <input type="number" id="cfg-default-litres" class="input-control" step="0.25" min="0" value="1.5">
+                <div class="settings-grid">
+                    
+                    <!-- Preferences Settings Group -->
+                    <div class="settings-group">
+                        <h4>Milk Logging Preferences</h4>
+                        <div class="settings-input-row">
+                            <span class="input-label">Default Litre Amount (Ltr):</span>
+                            <input type="number" id="cfg-default-litres" class="input-control" step="0.25" min="0" value="1.5">
+                        </div>
+                        <div class="settings-input-row">
+                            <span class="input-label">Rate per Litre (₹):</span>
+                            <input type="number" id="cfg-rate-per-litre" class="input-control" step="1" min="0" value="75">
+                        </div>
                     </div>
-                    <div class="settings-input-row">
-                        <span class="input-label">Rate per Litre (₹):</span>
-                        <input type="number" id="cfg-rate-per-litre" class="input-control" step="1" min="0" value="75">
-                    </div>
-                </div>
 
-                <!-- Backup Settings Group -->
-                <div class="settings-group">
-                    <h4>Year-wise Backup / Restore</h4>
-                    <p class="input-label" style="font-size: 0.82rem; margin-bottom: 4px;">
-                        To keep data secure across updates, save a backup file of your logs for any year:
-                    </p>
-                    <div class="settings-input-row">
-                        <select id="backup-year-select" class="select-control">
-                            <!-- Populated dynamically via JS -->
-                        </select>
-                        <button id="btn-export-backup" class="btn btn-primary" style="padding: 8px 12px; font-size: 0.85rem;">
-                            📤 Export
-                        </button>
+                    <!-- Backup Settings Group -->
+                    <div class="settings-group">
+                        <h4>Year-wise Backup / Restore</h4>
+                        <p class="input-label" style="font-size: 0.82rem; margin-bottom: 4px;">
+                            Save a backup file of your logs for any calendar year to restore later:
+                        </p>
+                        <div class="settings-input-row">
+                            <select id="backup-year-select" class="select-control">
+                                <!-- Populated dynamically via JS -->
+                            </select>
+                            <button id="btn-export-backup" class="btn btn-primary" style="padding: 8px 12px; font-size: 0.85rem;">
+                                📤 Export
+                            </button>
+                        </div>
+                        <div class="backup-actions">
+                            <button id="btn-import-trigger" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; width: 100%;">
+                                📥 Import Backup File
+                            </button>
+                            <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                        </div>
+                        <div id="backup-status-log" class="status-text"></div>
                     </div>
-                    <div class="backup-actions">
-                        <button id="btn-import-trigger" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; width: 100%;">
-                            📥 Import Backup File
-                        </button>
-                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
-                    </div>
-                    <div id="backup-status-log" class="status-text"></div>
-                </div>
 
-                <!-- Active Retention Settings Group -->
-                <div class="settings-group">
-                    <h4>Data Retention Limit</h4>
-                    <div style="font-size: 0.85rem; color: var(--clr-text-muted); display: flex; flex-direction: column; gap: 6px;">
-                        <div>Status: <strong style="color: var(--clr-accent);">Active (Max 3 Months Retained)</strong></div>
-                        <div id="retention-info-months">Active Window: Loading...</div>
-                        <div id="retention-info-oldest">Oldest Entry: None</div>
+                    <!-- Active Retention & Protection Group -->
+                    <div class="settings-group">
+                        <h4>Storage & Retention Status</h4>
+                        <div style="font-size: 0.85rem; color: var(--clr-text-muted); display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Storage Protection Status -->
+                            <div class="settings-input-row" style="margin-bottom: 4px;">
+                                <span class="input-label">Storage Protection:</span>
+                                <div id="storage-badge" class="storage-badge" title="Checking storage protection status...">
+                                    <span id="storage-icon">🔓</span>
+                                    <span id="storage-status-text">Temporary</span>
+                                </div>
+                            </div>
+                            <!-- Retention boundary -->
+                            <div>Auto-Retention: <strong style="color: var(--clr-accent);">Active (Max 3 Months)</strong></div>
+                            <div id="retention-info-months">Active Window: Loading...</div>
+                            <div id="retention-info-oldest">Oldest Log: None</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+            
+        </div>
 
     </div>
 
@@ -199,6 +213,6 @@
     </div>
 
     <!-- Application Controller Logic -->
-    <script src="app.js?v=1.0.0"></script>
+    <script src="app.js?v=1.0.1"></script>
 </body>
 </html>

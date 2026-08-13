@@ -131,6 +131,12 @@ const MilkTracker = {
 
     cacheElements() {
         this.el = {
+            // Tab Switch Elements
+            tabBtnLedger: document.getElementById('tab-btn-ledger'),
+            tabBtnSettings: document.getElementById('tab-btn-settings'),
+            ledgerScreen: document.getElementById('ledger-screen'),
+            settingsScreen: document.getElementById('settings-screen'),
+
             storageBadge: document.getElementById('storage-badge'),
             storageIcon: document.getElementById('storage-icon'),
             storageStatusText: document.getElementById('storage-status-text'),
@@ -140,7 +146,6 @@ const MilkTracker = {
             navMonthTitle: document.getElementById('nav-month-title'),
             
             statTotalLitres: document.getElementById('stat-total-litres'),
-            statRateVal: document.getElementById('stat-rate-val'),
             statTotalCost: document.getElementById('stat-total-cost'),
             
             calendarGrid: document.getElementById('calendar-grid'),
@@ -184,6 +189,10 @@ const MilkTracker = {
     },
 
     bindEvents() {
+        // Tab Switch triggers
+        this.el.tabBtnLedger.addEventListener('click', () => this.switchTab('ledger'));
+        this.el.tabBtnSettings.addEventListener('click', () => this.switchTab('settings'));
+
         // Month Navigation
         this.el.btnPrevMonth.addEventListener('click', () => this.changeMonth(-1));
         this.el.btnNextMonth.addEventListener('click', () => this.changeMonth(1));
@@ -221,6 +230,26 @@ const MilkTracker = {
             this.hideToast();
             this.exportBackup();
         });
+    },
+
+    // ==========================================================================
+    // 🎛️ TAB SWITCH ENGINE
+    // ==========================================================================
+    switchTab(tabName) {
+        if (tabName === 'ledger') {
+            this.el.tabBtnLedger.classList.add('active');
+            this.el.tabBtnSettings.classList.remove('active');
+            this.el.ledgerScreen.classList.add('active');
+            this.el.settingsScreen.classList.remove('active');
+            
+            // Re-render calendar metrics to catch default changes
+            this.renderDashboard();
+        } else {
+            this.el.tabBtnLedger.classList.remove('active');
+            this.el.tabBtnSettings.classList.add('active');
+            this.el.ledgerScreen.classList.remove('active');
+            this.el.settingsScreen.classList.add('active');
+        }
     },
 
     // ==========================================================================
@@ -301,12 +330,12 @@ const MilkTracker = {
         
         // Update storage locked status
         if (isPersisted) {
-            this.el.storageStatusText.innerText = "Storage: Locked (Permanent)";
+            this.el.storageStatusText.innerText = "Locked (Permanent)";
             this.el.storageIcon.innerText = "🔒";
             this.el.storageBadge.classList.add('persisted');
             this.el.storageBadge.title = "Your data is locked. The browser will never delete it under low storage pressure.";
         } else {
-            this.el.storageStatusText.innerText = "Storage: Temporary";
+            this.el.storageStatusText.innerText = "Temporary";
             this.el.storageIcon.innerText = "🔓";
             this.el.storageBadge.classList.remove('persisted');
             this.el.storageBadge.title = "Temporary storage. The browser may delete your data if your device space runs extremely low.";
@@ -353,17 +382,12 @@ const MilkTracker = {
         ];
         this.el.navMonthTitle.innerText = `${monthNames[month]} ${year}`;
 
-        // 2. Set Active Rate Metric
-        const currentRate = this.db.settings.pricePerLitre || 75.0;
-        this.el.statRateVal.innerText = currentRate.toFixed(2);
-
-        // 3. Render Calendar Grid cells
+        // 2. Render Calendar Grid cells
         this.el.calendarGrid.innerHTML = '';
         
         // Days details
         const firstDayIndex = new Date(year, month, 1).getDay(); // 0 = Sun, 1 = Mon ...
         const totalDays = new Date(year, month + 1, 0).getDate(); // Total days in selected month
-        const prevMonthTotalDays = new Date(year, month, 0).getDate();
 
         // Filler days from previous month
         for (let i = firstDayIndex; i > 0; i--) {
@@ -784,7 +808,7 @@ const MilkTracker = {
         // Update UI info
         if (monthsSet.size === 0) {
             this.el.retentionInfoMonths.innerText = "Active Window: Empty database";
-            this.el.retentionInfoOldest.innerText = "Oldest Entry: None";
+            this.el.retentionInfoOldest.innerText = "Oldest Log: None";
             return;
         }
 
@@ -796,7 +820,7 @@ const MilkTracker = {
         this.el.retentionInfoMonths.innerText = `Active Window: ${startMonthLabel} to ${endMonthLabel}`;
         
         if (oldestKey) {
-            this.el.retentionInfoOldest.innerText = `Oldest Entry: ${oldestKey}`;
+            this.el.retentionInfoOldest.innerText = `Oldest Log: ${oldestKey}`;
         }
     },
 
