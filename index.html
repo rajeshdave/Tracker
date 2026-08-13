@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🥛 Milk Tracker - Monthly Milk Ledger</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥛</text></svg>">
+    <!-- Style Sheet -->
+    <link rel="stylesheet" href="styles.css?v=1.0.0">
+</head>
+<body>
+    <div id="app-container">
+        
+        <!-- ================= APP HEADER ================= -->
+        <header class="app-header">
+            <div class="brand">
+                <span class="brand-logo">🥛</span>
+                <h1 class="brand-title">Milk Tracker</h1>
+            </div>
+            <div id="storage-badge" class="storage-badge" title="Checking storage protection status...">
+                <span id="storage-icon">🔓</span>
+                <span id="storage-status-text">Storage: Temporary</span>
+            </div>
+        </header>
+
+        <!-- ================= MONTH NAVIGATION ================= -->
+        <section class="navigation-bar">
+            <button id="btn-prev-month" class="btn-nav" aria-label="Previous Month">
+                <span>⬅️</span> <span class="nav-btn-text">Prev</span>
+            </button>
+            <h2 id="nav-month-title" class="nav-month-title">August 2026</h2>
+            <button id="btn-next-month" class="btn-nav" aria-label="Next Month">
+                <span class="nav-btn-text">Next</span> <span>➡️</span>
+            </button>
+        </section>
+
+        <!-- ================= STATS SUMMARY BANNER ================= -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-label">Total Milk Volume</span>
+                <div class="stat-val">
+                    <span id="stat-total-litres">0.00</span>
+                    <span class="stat-unit">Ltr</span>
+                </div>
+            </div>
+            <div class="stat-card accent">
+                <span class="stat-label">Rate Per Litre</span>
+                <div class="stat-val">
+                    <span class="stat-unit">₹</span><span id="stat-rate-val">75.00</span>
+                </div>
+            </div>
+            <div class="stat-card success">
+                <span class="stat-label">Total Monthly Cost</span>
+                <div class="stat-val">
+                    <span class="stat-unit">₹</span><span id="stat-total-cost">0.00</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= CALENDAR LEDGER VIEW ================= -->
+        <main class="calendar-card">
+            <div class="calendar-header">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+            </div>
+            <div id="calendar-grid" class="calendar-grid">
+                <!-- Days will be dynamically loaded via JS -->
+            </div>
+            
+            <div style="text-align: center; margin-top: 10px;">
+                <button id="btn-quick-log" class="btn btn-primary">
+                    ➕ Record for Specific Date
+                </button>
+            </div>
+        </main>
+
+        <!-- ================= SETTINGS & BACKUP DRAWER ================= -->
+        <section class="settings-panel">
+            <h3 class="panel-title">⚙️ Settings & Year-wise Backups</h3>
+            <div class="settings-grid">
+                
+                <!-- Preferences Settings Group -->
+                <div class="settings-group">
+                    <h4>Preference Settings</h4>
+                    <div class="settings-input-row">
+                        <span class="input-label">Default Litre Amount (Ltr):</span>
+                        <input type="number" id="cfg-default-litres" class="input-control" step="0.25" min="0" value="1.5">
+                    </div>
+                    <div class="settings-input-row">
+                        <span class="input-label">Rate per Litre (₹):</span>
+                        <input type="number" id="cfg-rate-per-litre" class="input-control" step="1" min="0" value="75">
+                    </div>
+                </div>
+
+                <!-- Backup Settings Group -->
+                <div class="settings-group">
+                    <h4>Year-wise Backup / Restore</h4>
+                    <p class="input-label" style="font-size: 0.82rem; margin-bottom: 4px;">
+                        To keep data secure across updates, save a backup file of your logs for any year:
+                    </p>
+                    <div class="settings-input-row">
+                        <select id="backup-year-select" class="select-control">
+                            <!-- Populated dynamically via JS -->
+                        </select>
+                        <button id="btn-export-backup" class="btn btn-primary" style="padding: 8px 12px; font-size: 0.85rem;">
+                            📤 Export
+                        </button>
+                    </div>
+                    <div class="backup-actions">
+                        <button id="btn-import-trigger" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; width: 100%;">
+                            📥 Import Backup File
+                        </button>
+                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                    </div>
+                    <div id="backup-status-log" class="status-text"></div>
+                </div>
+
+                <!-- Active Retention Settings Group -->
+                <div class="settings-group">
+                    <h4>Data Retention Limit</h4>
+                    <div style="font-size: 0.85rem; color: var(--clr-text-muted); display: flex; flex-direction: column; gap: 6px;">
+                        <div>Status: <strong style="color: var(--clr-accent);">Active (Max 3 Months Retained)</strong></div>
+                        <div id="retention-info-months">Active Window: Loading...</div>
+                        <div id="retention-info-oldest">Oldest Entry: None</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ================= ADD / EDIT ENTRY MODAL DIALOG ================= -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title" class="modal-title">Log Milk Entry</h3>
+                <button id="modal-close" class="modal-close" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                
+                <!-- Date Picker Select Row (only shown or editable for quick add button) -->
+                <div id="modal-date-picker-row" class="settings-input-row" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 12px;">
+                    <span class="input-label">Date:</span>
+                    <input type="date" id="modal-date-input" class="select-control" style="width: 160px; font-weight: 600;">
+                </div>
+
+                <!-- Litre Stepper Interface -->
+                <div class="stepper-container">
+                    <span class="stepper-label">Milk Quantity</span>
+                    <div class="stepper">
+                        <button id="btn-step-minus" class="btn-step" aria-label="Decrease milk amount">&minus;</button>
+                        <div class="stepper-val-container">
+                            <span id="stepper-value" class="stepper-val">1.50</span>
+                            <span class="stepper-unit">Ltr</span>
+                        </div>
+                        <button id="btn-step-plus" class="btn-step" aria-label="Increase milk amount">+</button>
+                    </div>
+                </div>
+
+                <!-- Equation Live Preview -->
+                <div class="preview-box">
+                    <div class="preview-equation">
+                        <span id="preview-litres">1.50</span> Ltr &times; ₹<span id="preview-rate">75.00</span>
+                    </div>
+                    <div class="preview-total">
+                        Total Day Cost: ₹<span id="preview-total-cost">112.50</span>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button id="btn-modal-delete" class="btn btn-danger" style="margin-right: auto; display: none;">
+                    🗑️ Delete
+                </button>
+                <button id="btn-modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="btn-modal-save" class="btn btn-primary">Save Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= FLOATING TOAST NOTIFICATION CONTAINER ================= -->
+    <div id="toast-container">
+        <div class="toast">
+            <div class="toast-header">
+                <span id="toast-title" class="toast-title">⚠️ Storage Notice</span>
+                <button id="toast-close" class="toast-close">&times;</button>
+            </div>
+            <div id="toast-body" class="toast-body">
+                Auto-cleaned logs older than 3 months. Make sure you download your backup records for safety.
+            </div>
+            <button id="toast-action-btn" class="toast-action-btn">Backup Now</button>
+        </div>
+    </div>
+
+    <!-- Application Controller Logic -->
+    <script src="app.js?v=1.0.0"></script>
+</body>
+</html>
