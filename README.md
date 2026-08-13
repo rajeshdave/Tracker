@@ -24,8 +24,10 @@ Since this is built with standard web technologies (HTML, CSS, and Vanilla JavaS
 
 ## ✨ Features & Functionality
 
-*   **📅 Monthly Calendar Grid**:
+*   **📅 Monthly Calendar Grid & Auto-Population**:
     *   Displays days of the currently selected month.
+    *   **Auto-Setup on Launch**: Automatically populates all days of the current calendar month with the default litre amount (e.g., `1.5L`) if the database is completely empty for this month.
+    *   **⚡ Single-Click Month Fill**: If you navigate to any empty month (e.g., a future month), a button appears under the calendar allowing you to populate all dates with your default litres in one tap.
     *   Highlights days containing logged records with a custom indicator (showing quantity in litres and the computed day price).
     *   Unrecorded cells display a dotted border and a quick-add `+` indicator on hover.
 *   **⚖️ Live Stepper & Editor**:

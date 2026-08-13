@@ -17,11 +17,13 @@ This project was designed and implemented by **Gemini** to create a highly optim
 
 During the planning and development phase, the application was engineered to prioritize speed, simplicity, and premium aesthetic details:
 
-1.  **Fluid Calendar Ledger Dashboard**:
+1.  **Fluid Calendar Ledger Dashboard & Auto-Setup**:
     *   Responsive 7-column layout that shifts automatically for desktop and mobile displays.
     *   Day blocks display recorded milk volume (e.g., `1.50L`) and computed daily costs (e.g., `₹112.50`) for clear readability.
     *   Active/Today cell is highlighted with a circular primary badge.
     *   Unrecorded cells display a dotted border and a quick-add hover interface to simplify entry addition.
+    *   **Startup Auto-Setup**: If the current calendar month contains no entries on app launch, the script automatically populates all days of that month with the default litre volume to streamline tracking.
+    *   **⚡ Single-Click Month Fill**: When navigating to any empty month (e.g., a future month), a button appears below the calendar enabling the user to populate the entire month with their default configuration in one click.
 2.  **Litre Stepper Input**:
     *   Avoids keyboard inputs on mobile by introducing large, high-contrast subtraction `-` and addition `+` adjustment keys.
     *   Quantity values step by `0.25L` or `0.5L`, ensuring simple configuration.
