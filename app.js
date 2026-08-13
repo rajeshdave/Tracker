@@ -8,7 +8,7 @@
 const DB_NAME = 'MilkTrackerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'settings';
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 
 // ==========================================================================
 // 📦 INDEXEDDB STORAGE WRAPPER
@@ -120,6 +120,9 @@ const MilkTracker = {
         this.el.cfgDefaultLitres.value = this.db.settings.defaultLitres || 1.5;
         this.el.cfgRatePerLitre.value = this.db.settings.pricePerLitre || 75;
 
+        // Auto-populate current month if empty
+        this.autoPopulateCurrentMonthIfNeeded();
+
         // Perform initial retention prune (2-3 months threshold)
         this.pruneOldData(true); // silent on load
 
@@ -151,6 +154,7 @@ const MilkTracker = {
             statTotalCost: document.getElementById('stat-total-cost'),
             
             calendarGrid: document.getElementById('calendar-grid'),
+            btnAutoPopulate: document.getElementById('btn-auto-populate'),
             btnQuickLog: document.getElementById('btn-quick-log'),
             
             cfgDefaultLitres: document.getElementById('cfg-default-litres'),
@@ -198,6 +202,17 @@ const MilkTracker = {
         // Month Navigation
         this.el.btnPrevMonth.addEventListener('click', () => this.changeMonth(-1));
         this.el.btnNextMonth.addEventListener('click', () => this.changeMonth(1));
+
+        // Auto Populate Month Trigger
+        this.el.btnAutoPopulate.addEventListener('click', () => {
+            const activeYear = this.currentMonth.getFullYear();
+            const activeMonth = this.currentMonth.getMonth();
+            const defLitres = this.db.settings.defaultLitres || 1.5;
+            if (confirm(`Are you sure you want to populate all dates in this month with the default ${defLitres.toFixed(2)}L?`)) {
+                this.populateMonth(activeYear, activeMonth);
+                this.renderDashboard();
+            }
+        });
 
         // Floating Quick Log Date Trigger
         this.el.btnQuickLog.addEventListener('click', () => this.openLogModal());
@@ -489,6 +504,18 @@ const MilkTracker = {
         this.el.statTotalLitres.innerText = monthlyVolume.toFixed(2);
         this.el.statTotalCost.innerText = monthlyCost.toFixed(2);
 
+        // Toggle the auto-populate button based on whether month has records
+        const activePrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+        const hasAnyEntries = Object.keys(this.db.entries).some(key => key.startsWith(activePrefix));
+        
+        if (!hasAnyEntries) {
+            const defLitres = this.db.settings.defaultLitres || 1.5;
+            this.el.btnAutoPopulate.innerText = `⚡ Auto-Populate Month (${defLitres.toFixed(2)}L)`;
+            this.el.btnAutoPopulate.style.display = 'block';
+        } else {
+            this.el.btnAutoPopulate.style.display = 'none';
+        }
+
         // Update Data Retention Panel metrics
         this.updateRetentionMetadata();
     },
@@ -754,6 +781,41 @@ const MilkTracker = {
         setTimeout(() => {
             log.style.opacity = '0';
         }, 4000);
+    },
+
+    // ==========================================================================
+    // ⚡ AUTO-POPULATION LOGIC
+    // ==========================================================================
+    autoPopulateCurrentMonthIfNeeded() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const monthIndex = today.getMonth();
+        const activePrefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}-`;
+        
+        const hasAnyEntries = Object.keys(this.db.entries).some(key => key.startsWith(activePrefix));
+        if (!hasAnyEntries) {
+            console.log("Auto-populating current month on load...");
+            this.populateMonth(year, monthIndex);
+        }
+    },
+
+    populateMonth(year, monthIndex) {
+        const totalDays = new Date(year, monthIndex + 1, 0).getDate();
+        const defaultLitres = this.db.settings.defaultLitres || 1.5;
+        const rate = this.db.settings.pricePerLitre || 75.0;
+        const cost = defaultLitres * rate;
+        const timestamp = new Date().toISOString();
+
+        for (let day = 1; day <= totalDays; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            this.db.entries[dateStr] = {
+                litres: defaultLitres,
+                cost: cost,
+                lastModified: timestamp
+            };
+        }
+        
+        this.saveDb();
     },
 
     // ==========================================================================

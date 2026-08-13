@@ -7,7 +7,7 @@
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥛</text></svg>">
     <!-- Style Sheet -->
-    <link rel="stylesheet" href="styles.css?v=1.0.1">
+    <link rel="stylesheet" href="styles.css?v=1.0.4">
 </head>
 <body>
     <div id="app-container">
@@ -72,8 +72,11 @@
                 </div>
             </section>
             
-            <div style="text-align: center; margin-top: 10px;">
-                <button id="btn-quick-log" class="btn btn-primary" style="width: 100%; max-width: 320px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 12px;">
+                <button id="btn-auto-populate" class="btn btn-primary" style="width: 100%; max-width: 320px; background-color: var(--clr-accent); display: none;">
+                    ⚡ Auto-Populate Month (1.5L)
+                </button>
+                <button id="btn-quick-log" class="btn btn-secondary" style="width: 100%; max-width: 320px;">
                     ➕ Record for Specific Date
                 </button>
             </div>
@@ -213,6 +216,6 @@
     </div>
 
     <!-- Application Controller Logic -->
-    <script src="app.js?v=1.0.1"></script>
+    <script src="app.js?v=1.0.4"></script>
 </body>
 </html>
