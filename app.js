@@ -8,7 +8,7 @@
 const DB_NAME = 'MilkTrackerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'settings';
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 // ==========================================================================
 // 📦 INDEXEDDB STORAGE WRAPPER
@@ -238,6 +238,14 @@ const MilkTracker = {
     // 🔄 AUTO-UPDATE & CACHE BUSTING CHECK
     // ==========================================================================
     async checkForUpdates() {
+        // 1. Immediately strip cache-busting version query parameters from the address bar
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('v')) {
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+        }
+
+        // 2. Check server for new version (bypassing CDN / browser cache)
         try {
             const response = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
             if (response.ok) {
@@ -246,7 +254,7 @@ const MilkTracker = {
                     console.log(`New version detected: ${data.version}. Reloading browser to bypass cache...`);
                     const url = new URL(window.location.href);
                     url.searchParams.set('v', data.version);
-                    window.location.href = url.toString();
+                    window.location.replace(url.toString());
                 }
             }
         } catch (e) {
