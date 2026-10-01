@@ -41,6 +41,11 @@ Since this is built with standard web technologies (HTML, CSS, and Vanilla JavaS
 *   **⚙️ Custom Preferences**:
     *   Default litre logging amount (e.g. `1.5L`) is configurable in the settings panel.
     *   Base rate per litre (default `₹75`) can be modified at any time to dynamically update costs.
+*   **🔄 Bulk Month Price Recalculation**:
+    *   Recalculate all daily costs for any specific calendar month in bulk at a new price per litre.
+    *   Accessible directly from the **Ledger** view (`🔄 Recalculate Month Price` button or clicking the **Total Monthly Cost** card) and from the **Settings** panel.
+    *   Features a live preview of volume, previous cost, new total cost, difference indicator, and an optional checkbox to sync the new rate to Settings defaults.
+    *   Preserves recorded milk quantities and automatically applies the month's updated rate to any future edits in that month.
 *   **📤 Year-wise Backup & Restore**:
     *   Select a year and download a dedicated JSON data archive (e.g. `milk_tracker_backup_2026.json`).
     *   Import a JSON backup to merge entries. Conflict resolution automatically retains newer changes (via modification timestamps) and larger volumes.

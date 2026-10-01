@@ -30,7 +30,13 @@ During the planning and development phase, the application was engineered to pri
     *   Live equations update automatically under the stepper to show calculations (`Litres × Price = Total`) before saving.
 3.  **Configurable Base Rates**:
     *   Rather than hardcoding the 75 Rupees per litre rate, the app loads with a configurable input box.
-    *   Adjusting the preference settings dynamically updates the database defaults and recalculates all current month totals.
+    *   Adjusting the preference settings dynamically updates the database defaults.
+4.  **Bulk Month-Level Price Recalculation**:
+    *   Allows updating the rate per litre for any specific month in bulk without re-entering daily logs.
+    *   Available directly from the Ledger screen (`🔄 Recalculate Month Price` button or clicking the **Total Monthly Cost** card) and from the Settings tab.
+    *   Features an interactive modal dialog with volume summary, old vs new cost comparison, live preview equation, and an optional sync checkbox for global default rate.
+    *   Recalculates all logged days for the target month in IndexedDB and localStorage, preserving volume logs and updating modification timestamps.
+
 
 ---
 

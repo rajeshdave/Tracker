@@ -226,6 +226,17 @@ body {
     border-left-color: var(--clr-success);
 }
 
+.stat-card.interactive {
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.stat-card.interactive:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-left-width: 6px;
+}
+
 .stat-label {
     font-size: 0.78rem;
     font-weight: 600;
@@ -719,6 +730,14 @@ body {
 .btn-danger:hover {
     background-color: var(--clr-danger);
     color: var(--clr-surface);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* Toast alert notification banner (fixed at top/center) */

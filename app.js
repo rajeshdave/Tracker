@@ -8,7 +8,12 @@
 const DB_NAME = 'MilkTrackerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'settings';
-const APP_VERSION = '1.0.5';
+const APP_VERSION = '1.0.6';
+
+const MONTH_NAMES = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+];
 
 // ==========================================================================
 // 📦 INDEXEDDB STORAGE WRAPPER
@@ -98,6 +103,11 @@ const MilkTracker = {
     currentMonth: new Date(), // Selected month in navigation
     selectedDateStr: null,    // Date active in the modal
     modalLitres: 1.5,         // Litres active in the modal stepper
+    modalRate: null,          // Rate active in the modal stepper
+    recalcYear: null,         // Target year in recalculate modal
+    recalcMonthIndex: null,   // Target month in recalculate modal
+    recalcTotalLitres: 0,     // Total litres for recalculate preview
+    recalcCurrentCost: 0,     // Current cost for recalculate preview
     
     // UI Elements cache
     el: {},
@@ -126,8 +136,9 @@ const MilkTracker = {
         // Perform initial retention prune (2-3 months threshold)
         this.pruneOldData(true); // silent on load
 
-        // Load Year Dropdowns & Render Dashboard
+        // Load Year Dropdowns, Month Dropdowns & Render Dashboard
         this.updateYearDropdowns();
+        this.updateMonthDropdowns();
         this.renderDashboard();
         
         // Bind UI Event Listeners
@@ -152,13 +163,20 @@ const MilkTracker = {
             
             statTotalLitres: document.getElementById('stat-total-litres'),
             statTotalCost: document.getElementById('stat-total-cost'),
+            statCardCost: document.getElementById('stat-card-cost'),
             
             calendarGrid: document.getElementById('calendar-grid'),
             btnAutoPopulate: document.getElementById('btn-auto-populate'),
             btnQuickLog: document.getElementById('btn-quick-log'),
+            btnRecalculateMonth: document.getElementById('btn-recalculate-month'),
             
             cfgDefaultLitres: document.getElementById('cfg-default-litres'),
             cfgRatePerLitre: document.getElementById('cfg-rate-per-litre'),
+            
+            recalcMonthSelect: document.getElementById('recalc-month-select'),
+            recalcMonthRate: document.getElementById('recalc-month-rate'),
+            btnRecalcMonthSettings: document.getElementById('btn-recalc-month-settings'),
+            recalcStatusLog: document.getElementById('recalc-status-log'),
             
             backupYearSelect: document.getElementById('backup-year-select'),
             btnExportBackup: document.getElementById('btn-export-backup'),
@@ -185,6 +203,22 @@ const MilkTracker = {
             btnModalCancel: document.getElementById('btn-modal-cancel'),
             btnModalSave: document.getElementById('btn-modal-save'),
             
+            // Recalculate Modal Dialog Elements
+            recalcModalOverlay: document.getElementById('recalc-modal-overlay'),
+            recalcModalTitle: document.getElementById('recalc-modal-title'),
+            recalcModalClose: document.getElementById('recalc-modal-close'),
+            recalcTargetMonthLabel: document.getElementById('recalc-target-month-label'),
+            recalcModalDaysCount: document.getElementById('recalc-modal-days-count'),
+            recalcModalTotalLitres: document.getElementById('recalc-modal-total-litres'),
+            recalcModalCurrentCost: document.getElementById('recalc-modal-current-cost'),
+            recalcModalRateInput: document.getElementById('recalc-modal-rate-input'),
+            recalcPreviewEquation: document.getElementById('recalc-preview-equation'),
+            recalcPreviewNewCost: document.getElementById('recalc-preview-new-cost'),
+            recalcPreviewDiff: document.getElementById('recalc-preview-diff'),
+            recalcUpdateSettingsDefault: document.getElementById('recalc-update-settings-default'),
+            btnRecalcCancel: document.getElementById('btn-recalc-cancel'),
+            btnRecalcConfirm: document.getElementById('btn-recalc-confirm'),
+
             // Toast Notification
             toastContainer: document.getElementById('toast-container'),
             toastTitle: document.getElementById('toast-title'),
@@ -237,6 +271,69 @@ const MilkTracker = {
         this.el.btnModalDelete.addEventListener('click', () => this.deleteEntry());
         this.el.btnModalSave.addEventListener('click', () => this.saveEntry());
         
+        // Modal Date change handler
+        if (this.el.modalDateInput) {
+            this.el.modalDateInput.addEventListener('change', () => {
+                const newDateStr = this.el.modalDateInput.value;
+                if (newDateStr) {
+                    this.selectedDateStr = newDateStr;
+                    this.modalRate = this.getRateForDate(newDateStr);
+                    this.updateStepperDisplay();
+                }
+            });
+        }
+
+        // Recalculate Month Action Triggers
+        if (this.el.btnRecalculateMonth) {
+            this.el.btnRecalculateMonth.addEventListener('click', () => {
+                this.openRecalculateModal(this.currentMonth.getFullYear(), this.currentMonth.getMonth());
+            });
+        }
+        if (this.el.statCardCost) {
+            this.el.statCardCost.addEventListener('click', () => {
+                const year = this.currentMonth.getFullYear();
+                const month = this.currentMonth.getMonth();
+                const prefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+                const hasEntries = Object.keys(this.db.entries).some(k => k.startsWith(prefix));
+                if (hasEntries) {
+                    this.openRecalculateModal(year, month);
+                }
+            });
+        }
+
+        // Settings Bulk Recalculate Triggers
+        if (this.el.recalcMonthSelect) {
+            this.el.recalcMonthSelect.addEventListener('change', () => this.syncRecalcSettingsRate());
+        }
+        if (this.el.btnRecalcMonthSettings) {
+            this.el.btnRecalcMonthSettings.addEventListener('click', () => {
+                const val = this.el.recalcMonthSelect.value;
+                if (!val) {
+                    this.showRecalcSettingsLog("Please select a month.", true);
+                    return;
+                }
+                const [yStr, mNumStr] = val.split('-');
+                const y = parseInt(yStr);
+                const m = parseInt(mNumStr) - 1;
+                const rate = parseFloat(this.el.recalcMonthRate.value);
+                this.openRecalculateModal(y, m, isNaN(rate) ? null : rate);
+            });
+        }
+
+        // Recalculate Modal Handlers
+        if (this.el.recalcModalClose) {
+            this.el.recalcModalClose.addEventListener('click', () => this.closeRecalculateModal());
+        }
+        if (this.el.btnRecalcCancel) {
+            this.el.btnRecalcCancel.addEventListener('click', () => this.closeRecalculateModal());
+        }
+        if (this.el.btnRecalcConfirm) {
+            this.el.btnRecalcConfirm.addEventListener('click', () => this.confirmRecalculate());
+        }
+        if (this.el.recalcModalRateInput) {
+            this.el.recalcModalRateInput.addEventListener('input', () => this.updateRecalcPreview());
+        }
+
         // Stepper Buttons
         this.el.btnStepMinus.addEventListener('click', () => this.adjustStepper(-0.25));
         this.el.btnStepPlus.addEventListener('click', () => this.adjustStepper(0.25));
@@ -294,6 +391,10 @@ const MilkTracker = {
             this.el.tabBtnSettings.classList.add('active');
             this.el.ledgerScreen.classList.remove('active');
             this.el.settingsScreen.classList.add('active');
+            
+            // Refresh month dropdowns and rates in settings
+            this.updateMonthDropdowns();
+            this.syncRecalcSettingsRate();
         }
     },
 
@@ -405,6 +506,7 @@ const MilkTracker = {
         
         // Redraw page values
         this.renderDashboard();
+        this.updateMonthDropdowns();
     },
 
     // ==========================================================================
@@ -421,11 +523,7 @@ const MilkTracker = {
         const month = this.currentMonth.getMonth(); // 0-11
 
         // 1. Render Header Month Label
-        const monthNames = [
-            "January", "February", "March", "April", "May", "June", 
-            "July", "August", "September", "October", "November", "December"
-        ];
-        this.el.navMonthTitle.innerText = `${monthNames[month]} ${year}`;
+        this.el.navMonthTitle.innerText = `${MONTH_NAMES[month]} ${year}`;
 
         // 2. Render Calendar Grid cells
         this.el.calendarGrid.innerHTML = '';
@@ -504,7 +602,7 @@ const MilkTracker = {
         this.el.statTotalLitres.innerText = monthlyVolume.toFixed(2);
         this.el.statTotalCost.innerText = monthlyCost.toFixed(2);
 
-        // Toggle the auto-populate button based on whether month has records
+        // Toggle the auto-populate button and recalculate button based on whether month has records
         const activePrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
         const hasAnyEntries = Object.keys(this.db.entries).some(key => key.startsWith(activePrefix));
         
@@ -512,8 +610,14 @@ const MilkTracker = {
             const defLitres = this.db.settings.defaultLitres || 1.5;
             this.el.btnAutoPopulate.innerText = `⚡ Auto-Populate Month (${defLitres.toFixed(2)}L)`;
             this.el.btnAutoPopulate.style.display = 'block';
+            if (this.el.btnRecalculateMonth) {
+                this.el.btnRecalculateMonth.style.display = 'none';
+            }
         } else {
             this.el.btnAutoPopulate.style.display = 'none';
+            if (this.el.btnRecalculateMonth) {
+                this.el.btnRecalculateMonth.style.display = 'block';
+            }
         }
 
         // Update Data Retention Panel metrics
@@ -523,6 +627,28 @@ const MilkTracker = {
     // ==========================================================================
     // ✍️ ENTRY MODAL & STEPPER ENGINE
     // ==========================================================================
+    getRateForDate(dateStr) {
+        if (!dateStr) return this.db.settings.pricePerLitre || 75.0;
+        const entry = this.db.entries[dateStr];
+        if (entry) {
+            if (entry.rate) return entry.rate;
+            if (entry.litres > 0 && entry.cost > 0) {
+                return Math.round((entry.cost / entry.litres) * 100) / 100;
+            }
+        }
+        // Check other entries in the same month
+        const monthPrefix = dateStr.substring(0, 7) + '-';
+        for (const [k, v] of Object.entries(this.db.entries)) {
+            if (k.startsWith(monthPrefix)) {
+                if (v.rate) return v.rate;
+                if (v.litres > 0 && v.cost > 0) {
+                    return Math.round((v.cost / v.litres) * 100) / 100;
+                }
+            }
+        }
+        return this.db.settings.pricePerLitre || 75.0;
+    },
+
     openLogModal(dateStr = null) {
         // If dateStr is omitted, we assume "floating quick log for specific date"
         if (!dateStr) {
@@ -536,6 +662,7 @@ const MilkTracker = {
 
         this.selectedDateStr = dateStr;
         this.el.modalDateInput.value = dateStr;
+        this.modalRate = this.getRateForDate(dateStr);
 
         // Retrieve existing records or default value
         const entry = this.db.entries[dateStr];
@@ -572,7 +699,7 @@ const MilkTracker = {
         this.el.stepperValue.innerText = valStr;
         this.el.previewLitres.innerText = valStr;
 
-        const rate = this.db.settings.pricePerLitre || 75.0;
+        const rate = (this.modalRate !== null && this.modalRate !== undefined) ? this.modalRate : (this.db.settings.pricePerLitre || 75.0);
         this.el.previewRate.innerText = rate.toFixed(2);
 
         const cost = this.modalLitres * rate;
@@ -591,12 +718,13 @@ const MilkTracker = {
         }
 
         const litres = this.modalLitres;
-        const rate = this.db.settings.pricePerLitre || 75.0;
-        const cost = litres * rate;
+        const rate = (this.modalRate !== null && this.modalRate !== undefined) ? this.modalRate : (this.db.settings.pricePerLitre || 75.0);
+        const cost = parseFloat((litres * rate).toFixed(2));
 
         // Save record state
         this.db.entries[this.selectedDateStr] = {
             litres: litres,
+            rate: rate,
             cost: cost,
             lastModified: new Date().toISOString()
         };
@@ -607,6 +735,8 @@ const MilkTracker = {
         this.pruneOldData();
 
         this.renderDashboard();
+        this.updateMonthDropdowns();
+        this.updateYearDropdowns();
         this.closeLogModal();
     },
 
@@ -618,8 +748,265 @@ const MilkTracker = {
             
             this.saveDb();
             this.renderDashboard();
+            this.updateMonthDropdowns();
+            this.updateYearDropdowns();
             this.closeLogModal();
         }
+    },
+
+    // ==========================================================================
+    // 🔄 BULK MONTH PRICE RECALCULATION ENGINE
+    // ==========================================================================
+    openRecalculateModal(year, monthIndex, prefillRate = null) {
+        this.recalcYear = year;
+        this.recalcMonthIndex = monthIndex;
+
+        const monthStr = String(monthIndex + 1).padStart(2, '0');
+        const monthPrefix = `${year}-${monthStr}-`;
+        
+        let daysCount = 0;
+        let totalLitres = 0;
+        let currentCost = 0;
+        let effectiveRate = null;
+
+        Object.keys(this.db.entries).forEach(dateKey => {
+            if (dateKey.startsWith(monthPrefix)) {
+                const entry = this.db.entries[dateKey];
+                daysCount++;
+                totalLitres += entry.litres || 0;
+                currentCost += entry.cost || 0;
+                if (effectiveRate === null) {
+                    if (entry.rate) effectiveRate = entry.rate;
+                    else if (entry.litres > 0 && entry.cost > 0) effectiveRate = Math.round((entry.cost / entry.litres) * 100) / 100;
+                }
+            }
+        });
+
+        if (daysCount === 0) {
+            alert(`No logged entries found for ${MONTH_NAMES[monthIndex]} ${year}.`);
+            return;
+        }
+
+        const monthTitle = `${MONTH_NAMES[monthIndex]} ${year}`;
+        this.el.recalcTargetMonthLabel.innerText = monthTitle;
+        this.el.recalcModalDaysCount.innerText = daysCount;
+        this.el.recalcModalTotalLitres.innerText = totalLitres.toFixed(2);
+        this.el.recalcModalCurrentCost.innerText = currentCost.toFixed(2);
+        
+        this.recalcTotalLitres = totalLitres;
+        this.recalcCurrentCost = currentCost;
+
+        // Rate to pre-fill
+        const initialRate = prefillRate !== null ? prefillRate : (effectiveRate !== null ? effectiveRate : (this.db.settings.pricePerLitre || 75.0));
+        this.el.recalcModalRateInput.value = initialRate;
+        this.el.recalcUpdateSettingsDefault.checked = false;
+
+        this.updateRecalcPreview();
+
+        this.el.recalcModalOverlay.classList.add('active');
+    },
+
+    closeRecalculateModal() {
+        this.el.recalcModalOverlay.classList.remove('active');
+        this.recalcYear = null;
+        this.recalcMonthIndex = null;
+    },
+
+    updateRecalcPreview() {
+        const rate = parseFloat(this.el.recalcModalRateInput.value) || 0;
+        const totalLitres = this.recalcTotalLitres || 0;
+        const currentCost = this.recalcCurrentCost || 0;
+        const newTotal = totalLitres * rate;
+
+        this.el.recalcPreviewEquation.innerHTML = `${totalLitres.toFixed(2)} Ltr &times; ₹${rate.toFixed(2)}`;
+        this.el.recalcPreviewNewCost.innerText = newTotal.toFixed(2);
+
+        const diff = newTotal - currentCost;
+        if (Math.abs(diff) < 0.01) {
+            this.el.recalcPreviewDiff.innerText = "No difference from current monthly total";
+            this.el.recalcPreviewDiff.style.color = "var(--clr-text-muted)";
+        } else if (diff > 0) {
+            this.el.recalcPreviewDiff.innerText = `+₹${diff.toFixed(2)} compared to current total`;
+            this.el.recalcPreviewDiff.style.color = "var(--clr-accent)";
+        } else {
+            this.el.recalcPreviewDiff.innerText = `-₹${Math.abs(diff).toFixed(2)} compared to current total`;
+            this.el.recalcPreviewDiff.style.color = "var(--clr-success)";
+        }
+    },
+
+    confirmRecalculate() {
+        const rate = parseFloat(this.el.recalcModalRateInput.value);
+        if (isNaN(rate) || rate < 0) {
+            alert("Please enter a valid rate per litre.");
+            return;
+        }
+
+        const updateSettingsDefault = this.el.recalcUpdateSettingsDefault.checked;
+        const result = this.recalculateMonthPrice(this.recalcYear, this.recalcMonthIndex, rate, updateSettingsDefault);
+
+        if (result.success) {
+            const monthTitle = `${MONTH_NAMES[this.recalcMonthIndex]} ${this.recalcYear}`;
+            this.closeRecalculateModal();
+
+            this.showToast(
+                "💰 Recalculation Complete",
+                `Recalculated ${result.count} days for ${monthTitle} at ₹${rate.toFixed(2)}/L. New Monthly Total: ₹${result.totalCost.toFixed(2)}.`
+            );
+
+            this.showRecalcSettingsLog(`Recalculated ${result.count} days for ${monthTitle} at ₹${rate.toFixed(2)}/L (Total: ₹${result.totalCost.toFixed(2)}).`, false);
+        } else {
+            alert(result.message);
+        }
+    },
+
+    recalculateMonthPrice(year, monthIndex, newRate, updateSettingsDefault = false) {
+        if (isNaN(newRate) || newRate < 0) {
+            return { success: false, message: "Please enter a valid rate per litre." };
+        }
+
+        const monthStr = String(monthIndex + 1).padStart(2, '0');
+        const monthPrefix = `${year}-${monthStr}-`;
+        const timestamp = new Date().toISOString();
+        
+        let count = 0;
+        let totalLitres = 0;
+        let totalCost = 0;
+
+        Object.keys(this.db.entries).forEach(dateKey => {
+            if (dateKey.startsWith(monthPrefix)) {
+                const entry = this.db.entries[dateKey];
+                const litres = entry.litres || 0;
+                const cost = parseFloat((litres * newRate).toFixed(2));
+                
+                this.db.entries[dateKey] = {
+                    ...entry,
+                    litres: litres,
+                    rate: newRate,
+                    cost: cost,
+                    lastModified: timestamp
+                };
+
+                count++;
+                totalLitres += litres;
+                totalCost += cost;
+            }
+        });
+
+        if (count === 0) {
+            return { success: false, message: "No logged entries found for this month." };
+        }
+
+        if (updateSettingsDefault) {
+            this.db.settings.pricePerLitre = newRate;
+            if (this.el.cfgRatePerLitre) {
+                this.el.cfgRatePerLitre.value = newRate;
+            }
+        }
+
+        this.saveDb();
+        this.renderDashboard();
+        this.updateMonthDropdowns();
+        this.updateYearDropdowns();
+
+        return {
+            success: true,
+            count: count,
+            totalLitres: totalLitres,
+            totalCost: totalCost,
+            newRate: newRate
+        };
+    },
+
+    updateMonthDropdowns() {
+        if (!this.el.recalcMonthSelect) return;
+
+        const monthsSet = new Set();
+        Object.keys(this.db.entries).forEach(dateKey => {
+            const match = dateKey.match(/^(\d{4}-\d{2})-\d{2}$/);
+            if (match) {
+                monthsSet.add(match[1]);
+            }
+        });
+
+        const sortedMonths = Array.from(monthsSet).sort().reverse(); // descending
+        this.el.recalcMonthSelect.innerHTML = '';
+
+        if (sortedMonths.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.innerText = 'No logged months found';
+            this.el.recalcMonthSelect.appendChild(opt);
+            if (this.el.btnRecalcMonthSettings) {
+                this.el.btnRecalcMonthSettings.disabled = true;
+            }
+            return;
+        }
+
+        if (this.el.btnRecalcMonthSettings) {
+            this.el.btnRecalcMonthSettings.disabled = false;
+        }
+
+        sortedMonths.forEach(mStr => {
+            const [yStr, mNumStr] = mStr.split('-');
+            const mIndex = parseInt(mNumStr) - 1;
+            const y = parseInt(yStr);
+            
+            let count = 0;
+            const prefix = `${mStr}-`;
+            Object.keys(this.db.entries).forEach(k => {
+                if (k.startsWith(prefix)) count++;
+            });
+
+            const opt = document.createElement('option');
+            opt.value = mStr;
+            opt.innerText = `${MONTH_NAMES[mIndex]} ${y} (${count} ${count === 1 ? 'day' : 'days'})`;
+            this.el.recalcMonthSelect.appendChild(opt);
+        });
+
+        // Set default to current ledger month if available
+        const currentMonthStr = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, '0')}`;
+        if (monthsSet.has(currentMonthStr)) {
+            this.el.recalcMonthSelect.value = currentMonthStr;
+        }
+
+        this.syncRecalcSettingsRate();
+    },
+
+    syncRecalcSettingsRate() {
+        if (!this.el.recalcMonthSelect || !this.el.recalcMonthRate) return;
+        const selectedMonthStr = this.el.recalcMonthSelect.value;
+        if (!selectedMonthStr) return;
+
+        const prefix = `${selectedMonthStr}-`;
+        let effectiveRate = null;
+        for (const [k, v] of Object.entries(this.db.entries)) {
+            if (k.startsWith(prefix)) {
+                if (v.rate) {
+                    effectiveRate = v.rate;
+                    break;
+                } else if (v.litres > 0 && v.cost > 0) {
+                    effectiveRate = Math.round((v.cost / v.litres) * 100) / 100;
+                    break;
+                }
+            }
+        }
+        this.el.recalcMonthRate.value = effectiveRate !== null ? effectiveRate : (this.db.settings.pricePerLitre || 75.0);
+    },
+
+    showRecalcSettingsLog(msg, isError = false) {
+        if (!this.el.recalcStatusLog) return;
+        const log = this.el.recalcStatusLog;
+        log.innerText = msg;
+        log.style.opacity = '1';
+        if (isError) {
+            log.classList.add('error');
+        } else {
+            log.classList.remove('error');
+        }
+
+        setTimeout(() => {
+            log.style.opacity = '0';
+        }, 5000);
     },
 
     // ==========================================================================
@@ -757,6 +1144,7 @@ const MilkTracker = {
                 
                 // Redraw UI
                 this.updateYearDropdowns();
+                this.updateMonthDropdowns();
                 this.renderDashboard();
                 
                 this.showBackupLog(`Imported ${mergeCount} records successfully (skipped ${skipCount}).`, false);
@@ -805,19 +1193,22 @@ const MilkTracker = {
         const totalDays = new Date(year, monthIndex + 1, 0).getDate();
         const defaultLitres = this.db.settings.defaultLitres || 1.5;
         const rate = this.db.settings.pricePerLitre || 75.0;
-        const cost = defaultLitres * rate;
+        const cost = parseFloat((defaultLitres * rate).toFixed(2));
         const timestamp = new Date().toISOString();
 
         for (let day = 1; day <= totalDays; day++) {
             const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             this.db.entries[dateStr] = {
                 litres: defaultLitres,
+                rate: rate,
                 cost: cost,
                 lastModified: timestamp
             };
         }
         
         this.saveDb();
+        this.updateMonthDropdowns();
+        this.updateYearDropdowns();
     },
 
     // ==========================================================================

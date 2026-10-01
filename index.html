@@ -7,7 +7,7 @@
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥛</text></svg>">
     <!-- Style Sheet -->
-    <link rel="stylesheet" href="styles.css?v=1.0.5">
+    <link rel="stylesheet" href="styles.css?v=1.0.6">
 </head>
 <body>
     <div id="app-container">
@@ -64,7 +64,7 @@
                         <span class="stat-unit">Ltr</span>
                     </div>
                 </div>
-                <div class="stat-card success">
+                <div id="stat-card-cost" class="stat-card success interactive" title="Click to recalculate month price">
                     <span class="stat-label">Total Monthly Cost</span>
                     <div class="stat-val">
                         <span class="stat-unit">₹</span><span id="stat-total-cost">0.00</span>
@@ -78,6 +78,9 @@
                 </button>
                 <button id="btn-quick-log" class="btn btn-secondary" style="width: 100%; max-width: 320px;">
                     ➕ Record for Specific Date
+                </button>
+                <button id="btn-recalculate-month" class="btn btn-secondary" style="width: 100%; max-width: 320px; display: none;">
+                    🔄 Recalculate Month Price
                 </button>
             </div>
 
@@ -102,6 +105,30 @@
                             <span class="input-label">Rate per Litre (₹):</span>
                             <input type="number" id="cfg-rate-per-litre" class="input-control" step="1" min="0" value="75">
                         </div>
+                    </div>
+
+                    <!-- Bulk Month Rate Recalculation Group -->
+                    <div class="settings-group">
+                        <h4>Bulk Recalculate Month Price</h4>
+                        <p class="input-label" style="font-size: 0.82rem; margin-bottom: 4px;">
+                            Recalculate all daily costs for a selected month using a new rate per litre:
+                        </p>
+                        <div class="settings-input-row">
+                            <span class="input-label">Target Month:</span>
+                            <select id="recalc-month-select" class="select-control">
+                                <!-- Populated dynamically via JS -->
+                            </select>
+                        </div>
+                        <div class="settings-input-row">
+                            <span class="input-label">New Rate per Litre (₹):</span>
+                            <input type="number" id="recalc-month-rate" class="input-control" step="0.5" min="0" value="75">
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 4px;">
+                            <button id="btn-recalc-month-settings" class="btn btn-primary" style="padding: 8px 12px; font-size: 0.85rem; width: 100%;">
+                                🔄 Recalculate Month Entries
+                            </button>
+                        </div>
+                        <div id="recalc-status-log" class="status-text"></div>
                     </div>
 
                     <!-- Backup Settings Group -->
@@ -201,6 +228,53 @@
         </div>
     </div>
 
+    <!-- ================= RECALCULATE MONTH PRICE MODAL ================= -->
+    <div id="recalc-modal-overlay" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="recalc-modal-title" class="modal-title">🔄 Recalculate Month Price</h3>
+                <button id="recalc-modal-close" class="modal-close" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="font-size: 1.05rem; font-weight: 700; color: var(--clr-primary);" id="recalc-target-month-label">
+                    August 2026
+                </div>
+                
+                <div class="preview-box" style="text-align: left; font-size: 0.85rem; line-height: 1.7;">
+                    <div>📅 Logged Days: <strong id="recalc-modal-days-count">0</strong> days</div>
+                    <div>🥛 Total Milk Volume: <strong id="recalc-modal-total-litres">0.00</strong> Ltr</div>
+                    <div>💵 Current Monthly Cost: <strong>₹<span id="recalc-modal-current-cost">0.00</span></strong></div>
+                </div>
+
+                <div class="settings-input-row" style="border-top: 1px solid var(--clr-border); padding-top: 10px;">
+                    <span class="input-label" style="font-weight: 600;">New Rate per Litre (₹):</span>
+                    <input type="number" id="recalc-modal-rate-input" class="input-control" step="0.5" min="0" value="75" style="width: 100px;">
+                </div>
+
+                <div class="preview-box">
+                    <div class="preview-equation" id="recalc-preview-equation">
+                        0.00 Ltr &times; ₹75.00
+                    </div>
+                    <div class="preview-total">
+                        New Monthly Cost: ₹<span id="recalc-preview-new-cost">0.00</span>
+                    </div>
+                    <div id="recalc-preview-diff" style="font-size: 0.78rem; color: var(--clr-text-muted); margin-top: 2px;">
+                        <!-- Difference from current -->
+                    </div>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--clr-text-muted); cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="recalc-update-settings-default" style="accent-color: var(--clr-primary);">
+                    Also update default rate in Settings to this price
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-recalc-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="btn-recalc-confirm" class="btn btn-primary">Recalculate All Days</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= FLOATING TOAST NOTIFICATION CONTAINER ================= -->
     <div id="toast-container">
         <div class="toast">
@@ -216,6 +290,6 @@
     </div>
 
     <!-- Application Controller Logic -->
-    <script src="app.js?v=1.0.5"></script>
+    <script src="app.js?v=1.0.6"></script>
 </body>
 </html>
